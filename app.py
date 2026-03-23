@@ -1,22 +1,45 @@
-
 import streamlit as st
 import pickle
+import nltk
+import re
+
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+stop_words = set(stopwords.words('english'))
+lemmatizer = WordNetLemmatizer()
+
 model = pickle.load(open("model.pkl", "rb"))
 vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 
-st.title("Fake News Detection System")
+def clean_text(text):
+    text = text.lower()
+    text = re.sub('[^a-zA-Z]', ' ', text)
+    words = text.split()
+    words = [lemmatizer.lemmatize(w) for w in words if w not in stop_words]
+    return " ".join(words)
 
-st.write("Enter a news article below to check whether it is Fake or Real.")
+def predict(text):
+    text = clean_text(text)
+    vector = vectorizer.transform([text])
+    return model.predict(vector)[0]
 
-news_text = st.text_area("Enter News Text")
+st.set_page_config(page_title="Fake News Detector", layout="centered")
+
+st.title("📰 Fake News Detection")
+st.write("Enter a news article to check if it's **Fake or Real**")
+
+news = st.text_area("Enter News Text")
 
 if st.button("Predict"):
-
-    vect_text = vectorizer.transform([news_text])
-
-    prediction = model.predict(vect_text)
-
-    if prediction[0] == 0:
-        st.error("This News is Fake")
+    if news.strip() == "":
+        st.warning("Please enter some text")
     else:
-        st.success("This News is Real")
+        result = predict(news)
+        if result == 0:
+            st.error("Fake News ❌")
+        else:
+            st.success("Real News ✅")
