@@ -2,17 +2,17 @@ import streamlit as st
 import pickle
 import nltk
 import re
+import os
 
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from newspaper import Article
 
 nltk.download('stopwords')
 nltk.download('wordnet')
 
 stop_words = set(stopwords.words('english'))
 lemmatizer = WordNetLemmatizer()
-
-import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,30 +26,42 @@ def clean_text(text):
     words = [lemmatizer.lemmatize(w) for w in words if w not in stop_words]
     return " ".join(words)
 
-def predict(text):
-    text = clean_text(text)
-    vector = vectorizer.transform([text])
-    return model.predict(vector)[0]
+def predict_news(text):
+    cleaned = clean_text(text)
+    vector = vectorizer.transform([cleaned])
+    prediction = model.predict(vector)[0]
+    prob = model.predict_proba(vector)[0]
+    return prediction, prob
 
 st.set_page_config(page_title="Fake News Detector", layout="centered")
 
-st.title("Fake News Detection")
+st.title("📰 Fake News Detection")
 
 st.warning("⚠️ This model does not verify factual correctness, only text patterns.")
 
-news_text = st.text_area("Enter News Text")
+url = st.text_input("🔗 Enter News URL")
 
-if st.button("Predict"):
-    if news_text.strip() == "":
-        st.warning("Please enter some text")
+import requests
+from bs4 import BeautifulSoup
+
+if st.button("Fetch from URL"):
+    if url.strip() == "":
+        st.warning("Please enter a valid URL")
     else:
-        cleaned = clean_text(news_text)
-        vector = vectorizer.transform([cleaned])
+        try:
+            article = Article(url)
+            article.download()
+            article.parse()
+            news_text = article.text
 
-        prediction = model.predict(vector)[0]
-        prob = model.predict_proba(vector)[0]
+            # Fallback if empty
+            if news_text.strip() == "":
+                response = requests.get(url)
+                soup = BeautifulSoup(response.text, "html.parser")
+                paragraphs = soup.find_all("p")
+                news_text = " ".join([p.get_text() for p in paragraphs])
 
-        if prediction == 0:
-            st.error(f"Fake News ❌ (Confidence: {prob[0]*100:.2f}%)")
-        else:
-            st.success(f"Real News ✅ (Confidence: {prob[1]*100:.2f}%)")
+            st.text_area("Extracted News", news_text, height=200)
+
+        except:
+            st.error("Failed to fetch article. Try another URL.")
