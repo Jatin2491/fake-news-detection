@@ -29,17 +29,23 @@ def predict(text):
 
 st.set_page_config(page_title="Fake News Detector", layout="centered")
 
-st.title("📰 Fake News Detection")
-st.write("Enter a news article to check if it's **Fake or Real**")
+st.title("Fake News Detection")
 
-news = st.text_area("Enter News Text")
+st.warning("⚠️ This model does not verify factual correctness, only text patterns.")
+
+news_text = st.text_area("Enter News Text")
 
 if st.button("Predict"):
-    if news.strip() == "":
+    if news_text.strip() == "":
         st.warning("Please enter some text")
     else:
-        result = predict(news)
-        if result == 0:
-            st.error("Fake News ❌")
+        cleaned = clean_text(news_text)
+        vector = vectorizer.transform([cleaned])
+
+        prediction = model.predict(vector)[0]
+        prob = model.predict_proba(vector)[0]
+
+        if prediction == 0:
+            st.error(f"Fake News ❌ (Confidence: {prob[0]*100:.2f}%)")
         else:
-            st.success("Real News ✅")
+            st.success(f"Real News ✅ (Confidence: {prob[1]*100:.2f}%)")
