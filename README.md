@@ -1,7 +1,7 @@
 # 📰 Fake News Detection using Machine Learning
 
 ## 🚀 Live Demo
-(Add your Streamlit link here)
+https://fake-news-detection-jatin.streamlit.app/
 
 ## 📌 Overview
 This project uses Natural Language Processing (NLP) and Machine Learning to classify news articles as Fake or Real.
