@@ -44,24 +44,35 @@ url = st.text_input("🔗 Enter News URL")
 import requests
 from bs4 import BeautifulSoup
 
-if st.button("Fetch from URL"):
+url = st.text_input("🔗 Enter News URL")
+
+if st.button("Fetch & Predict"):
     if url.strip() == "":
         st.warning("Please enter a valid URL")
     else:
         try:
-            article = Article(url)
-            article.download()
-            article.parse()
-            news_text = article.text
+            with st.spinner("Fetching article..."):
+                article = Article(url)
+                article.download()
+                article.parse()
+                news_text = article.text
 
-            # Fallback if empty
-            if news_text.strip() == "":
-                response = requests.get(url)
-                soup = BeautifulSoup(response.text, "html.parser")
-                paragraphs = soup.find_all("p")
-                news_text = " ".join([p.get_text() for p in paragraphs])
+                # Fallback
+                if news_text.strip() == "":
+                    response = requests.get(url)
+                    soup = BeautifulSoup(response.text, "html.parser")
+                    paragraphs = soup.find_all("p")
+                    news_text = " ".join([p.get_text() for p in paragraphs])
 
+            
             st.text_area("Extracted News", news_text, height=200)
+
+            prediction, prob = predict_news(news_text)
+
+            if prediction == 0:
+                st.error(f"Fake News ❌ (Confidence: {prob[0]*100:.2f}%)")
+            else:
+                st.success(f"Real News ✅ (Confidence: {prob[1]*100:.2f}%)")
 
         except:
             st.error("Failed to fetch article. Try another URL.")
